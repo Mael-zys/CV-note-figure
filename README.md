@@ -1,3 +1,3 @@
-# CV-note-figure
+# Paper note
 
-The figures for my reading paper note
+My notes for self-surpervised learning (SSL) and vision and language pretraining (VLP) papers.
