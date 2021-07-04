@@ -72,3 +72,88 @@ ITM为判断图文是否匹配
 AKPM为如图所示的五个任务：旋转(Rotation)、拼图(Jigsaw)、伪装(Camouflage)、着色(Grey-to-Color)、修复(Blank-to-Color)
 
 ![image](figures/Kaleido-BERT_AKPM.jpg)
+
+## UNIMO
+
+特点：可以使用图片，文本和图文对来进行训练，并且训练的模型可以适用于单模态和多模态的任务。两种模态的数据信息可以互相促进，达到更好的效果。
+
+- 例子 
+
+![image](figures/UNIMO_example.jpg)
+
+- 网络结构
+
+![image](figures/UNIMO.jpg)
+
+- Cross-Modal Contrastive Learning
+
+![image](figures/UNIMO_CMCL.jpg)
+
+1. 文本改写（Text Rewriting）：为了增强图文在多个粒度上的语义对齐能力，论文将图像的文本描述从句子级、短语级和词汇级别三个粒度进行了改写。在句子级层面，基于回译（Back Translation，即一句话机器翻译模型翻译成多种其他语言，再翻译回来，利用机器翻译模型的能力在不改变句子原始意图的前提下得到相同含义的其他形式句子）的技术来获得一张图片的多个正例文本。进一步，利用自然语言离散化符号的特性，基于TF-IDF相似度检索得到更多的字面词汇重复率高，但是含义不同的句子作为一张图片的强负样本。在短语级和词汇级别，首先将文本解析成场景图，然后随机替换掉其中的物体（object）、属性（attribute）和关系（relation）以及它们的组合，获得这两个粒度的强负例。
+
+2.  图像/文本检索（Image and Text Retrieval）：为了在跨模态学习中融合更多的单模态知识，图文对的信息会被从大规模单模态数据中检索出来的背景知识进一步增强和丰富。这部分检索的数据会分别和图文对中的另一种模态数据组成弱相关对儿加入对比学习。
+
+- Loss
+
+Loss由三个部分组成，一个是CMCL loss，一个是visual loss（主要是随机mask，然后预测），最后是language loss（也是随机mask再预测，不过为了让模型能同时支持生成和理解两类目标，UNIMO设计了双向预测（Bidirectional prediction）和 序列生成（Seq2Seq Generation）两种损失）
+
+## ViLT
+
+模型简单，速度快，很多数据集的精度比不过sota
+
+- 4种VL模型比较
+
+![image](figures/ViLT_4models.jpg)
+
+1. VSE、VSE++和SCAN属于(a)类型。对图像和文本独立使用encoder，图像的更重，文本的更轻，使用简单的点积或者浅层attention层来表示两种模态特征的相似性。
+
+2. CLIP属于(b)类型。每个模态单独使用重的transformer encoder，使用池化后的图像特征点积计算特征相似性。
+
+3. ViLBERT、UNTER和Pixel-BERT属于(c)类型。这些方法使用深层transformer进行交互作用，但是由于VE仍然使用重的卷积网络进行特征抽取，导致计算量依然很大。
+
+4. 作者提出的ViLT属于(d)类型。ViLT是首个将VE设计的如TE一样轻量的方法，该方法的主要计算量都集中在模态交互上。
+
+- Visual Embedding Schema
+
+![image](figures/ViLT_runtime.jpg)
+
+模态交互部分可以分成两种方式：一种是single-stream(如BERT和UNITER)，另一种是dual-stream(如ViLBERT和LXMERT)。其中single-stream是对图像和文本concate然后进行交互操作，而dual-stream是不对图像和文本concate然后进行交互操作。ViLT延用single-stream的交互方式，因为dual-stream会引入额外的计算量。
+
+现有的VLP模型的text embedding基本上都使用类BERT结构，但是visual embedding存在着差异。在大多数情况下，visual embedding是现有VLP模型的瓶颈。visual embedding的方法总共有三大类，其中region feature方法通常采用Faster R-CNN二阶段检测器提取region的特征，grid feature方法直接使用CNN提取grid的特征，patch projection方法将输入图片切片投影提取特征。
+
+这样不需要CNN，速度比其他模型快很多
+
+- 模型
+
+![image](figures/ViLT_model.jpg)
+
+ViLT使用预训练的ViT来初始化交互的transformer，这样就可以直接处理视觉特征，不需要额外视觉encoder。
+
+文本特征输入部分，将文本转化成word embedding，然后和position embedding进行相加，最后和modal-type embedding进行concate。
+
+图像特征输入部分，将图像切块看成一个图像块序列，通过linear projection转化成visual embedding，然后和postion embedding进行相加，最后和modal-type embedding进行concate。
+
+其中word embedding和visual embedding通过可学习的modal-type embedding标志位来区分，其中0标志位表示word embedding部分，1标志位表示visual embedding部分。
+
+wrod embedding和visual embedding分别都嵌入了一个额外的可学习[class] embedding，方便和下游任务对接。
+
+- 训练目标
+
+1. Image Text Matching
+
+2. Masked Language Modeling
+
+3. Whole Word Masking
+
+WWM是因为比如“giraffe”会被bert分为三个tokens ["gi", "##raf","##fe"]，如果没有把整个单词都mask掉，模型可能会不考虑图片信息，直接通过前后的tokens进行预测。
+
+## VinVL
+
+提出了一种新的目标检测模型，通过这个模型生成visual feature，然后输入到改进的Oscar模型里面，进行预训练，在多个VL数据集上达到很好的效果。
+
+![image](figures/VinVL.jpg)
+
+输入可以是{caption, image-tags, image-features}用于image captioning，也可以是{question, answer, image-features}用于VQA
+
+第一个loss是Masked Token Loss，第二个是3-way Contrastive Loss，这是用来预测文字，图片和object tags是否配对，0表示匹配，1表示文字（question）不对，2表示tag（answer）不对
+
