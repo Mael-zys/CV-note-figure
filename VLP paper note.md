@@ -174,3 +174,32 @@ Task 1: Masked Language Modeling with Visual Clues
 Task 2: Masked RoI Classification with Linguistic Clues
 
 ![image](figures/VL-BERT_down.jpg)
+
+## Unicoder-VL
+
+![image](figures/Unicoder-VL.jpg)
+
+- Word embedding用BERT，Image embedding用Faster R-CNN，image那里的position encoding是一个5维的vector。
+
+- 预训练task：Masked Language Modeling(MLM), Masked Object Classifation (MOC) and Visuallinguistic Matching (VLM).
+
+- 在Image-Text Retrieva和Visual Commonsense Reasoning这两个task上面表现优秀
+
+## TDEN
+
+使用双流decouped网络结构，同时支持VL理解和生成任务。结果在Image Captioning，VQA，CIR，VCR表现SOTA
+
+- Overview
+
+![image](figures/TDEN.jpg)
+
+- 3种VLP结构对比
+
+![image](figures/TDEN_3.jpg)
+
+- Scheduled Sampling in VL Pretraining
+
+![image](figures/TDEN_3pass.jpg)
+
+因为在下游任务的finetune时，并没有人工的mask，可能导致差异，所以作者采用这种方法
+最后是用的Pass-C
