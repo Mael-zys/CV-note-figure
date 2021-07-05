@@ -30,6 +30,14 @@
 
 - 学习SimCLR， 使用projection head和strong data augmentation
 
+## MOCO v3
+
+目前很多SSL的模型中，image encoder用的还是CNN架构，比如ResNet，Faster R-CNN等，MOCO v3则探索了使用Transformer的可能。MoCov3将backbone替换成ViT，然后进行实验研究，探索Self-Supervised使用Transformer架构是否可行。然而实验中使用ViT作为backbone会导致Self-Supervised的训练过程不稳定，并且这个不稳定现象无法通过最终迁移预测的结果捕捉到。
+
+通过探索，fixed random patch projection比起learned patch projection会稳定许多，并且kNN accuracy也有一定的提升，最终结果也超过了其他SSL模型
+
+![image](figures/MOCO_v3.jpg)
+
 ## BYOL
 
 ![image](figures/BYOL.jpg)
