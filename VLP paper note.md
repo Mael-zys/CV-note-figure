@@ -1,15 +1,5 @@
 # Vision and Language Pretraining
 
-## CLIP
-
-特点：不需要专门的数据集，直接从网上爬取图片及其对应的文本描述来进行训练。能够在OCR, action recognition in videos, geo-localization, and many types of fine-grained object classification等领域达到较好的效果
-
-![image](figures/CLIP.jpg)
-
-Loss 用的是InfoNCE，Batch size超级大，为32768
-
-Text encoder 尝试了CBOW和Text Transformer。Image Encoder 用了ResNet 和 Vision Transformer。之后只使用linear projection来把两个encoder的输出投影到多模态embedding space。
-
 ## UNITER
 
 UNITER有两个Embedder，Image Embedder通过对Faster-RCNN的输出ROI feature以及其位置特征（7维，normalized top/left/bottom/right coordinates, width, height, and area.）进行融合建模，需要两个FC和一个LN操作完成。Text Embedder则参考BERT的输入，但是没有segment，因为一个图像只需要一段文本的描述。然后直接接入Transformer进行双向建模，融合两种模态，不同于双流预训练模型，这两类模态共享同一个Encoder
@@ -157,3 +147,30 @@ WWM是因为比如“giraffe”会被bert分为三个tokens ["gi", "##raf","##fe
 
 第一个loss是Masked Token Loss，第二个是3-way Contrastive Loss，这是用来预测文字，图片和object tags是否配对，0表示匹配，1表示文字（question）不对，2表示tag（answer）不对
 
+## VL-BERT
+
+![image](figures/VL-BERT.jpg)
+
+VL-BERT把视觉元素和语言元素都作为输入，模型分别在图像的感兴趣区域(RoIs)和输入句子中的单词上定义相应特征。
+
+- Token Embedding
+
+根据BERT的经验，语言词汇中嵌入了30000个单词。对每个特殊的元素分配特殊的Token。对于视觉元素，为每个元素分配一个特殊的[IMG]标记。
+
+- Visual Feature Embedding
+
+模型分别得到输入图像的视觉外观特征和视觉几何特征，然后将二者结合形成视觉特征。对于RoI所对应的视觉元素，采用Fast R-CNN进行特征表示。其中每个RoI输出层之前的特征向量作为视觉特征嵌入。对于非视觉元素，对应的视觉外观特征是对整个输入图像提取的特征。视觉几何特征的设计是为了通知VL-BERT图像中每个输入视觉元素的几何位置。视觉特征由视觉外观特征和视觉几何嵌入的串联得到，作为输入附在每个输入元素上。
+
+- Segment Embedding
+
+模型定义了三种类型的片段A、B、C，将输入元素从不同的来源中进行区分，即A和B分别表示第一个输入句子中的单词和第二个输入句子中的单词，而C表示输入图像中的RoI。
+
+- Sequence Position Embedding
+
+与BERT相同，向每个输入元素添加一个可学习的序列位置特征来表示输入序列中的顺序。由于输入的视觉元素之间没有自然的顺序，在输入序列中对它们进行任何排列都应该得到相同的结果，所以视觉元素的序列位置特征都是相同的。
+
+Task 1: Masked Language Modeling with Visual Clues
+
+Task 2: Masked RoI Classification with Linguistic Clues
+
+![image](figures/VL-BERT_down.jpg)

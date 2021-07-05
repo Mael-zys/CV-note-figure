@@ -126,3 +126,41 @@ SimSiam相当于没有momentum encoder的BYOL，没有negative pairs的SimCLR和
 ![image](figures/UP-DETR_loss.jpg)
 
 做multi-query时，为避免人为对patch进行分组的影响，需要对patch进行shuffle
+
+## CLIP
+
+特点：不需要专门的数据集，直接从网上爬取图片及其对应的文本描述来进行训练。能够在OCR, action recognition in videos, geo-localization, and many types of fine-grained object classification等领域达到较好的效果
+
+![image](figures/CLIP.jpg)
+
+Loss 用的是InfoNCE，Batch size超级大，为32768
+
+Text encoder 尝试了CBOW和Text Transformer。Image Encoder 用了ResNet 和 Vision Transformer。之后只使用linear projection来把两个encoder的输出投影到多模态embedding space。
+
+## ViLD
+
+主要思路是对基于分类的zero-shot模型，比如CLIP进行蒸馏，加入如Mask-RCNN之类的region detector,从而达到对检测任务的zero-shot
+
+- 例子
+
+![image](figures/ViLD_example.jpg)
+
+图中，紫色标签参与过训练，粉色标签是inference阶段新加入的。
+
+- 流程
+
+![image](figures/ViLD_overview.jpg)
+
+1. 训练阶段
+
+先将图片标注区域的图片裁剪出来通过Pre-trained Image Encoder编码得到标注区域的image embeddings(红色部分)，同时通过Mask R-CNN(Backbone+RPN+RoIAlign支路)产生类别无关的region embeddings(紫色部分)，image embeddings和region embeddings需要进行知识蒸馏。基本类别(绿色部分)转化成文本送入Pre-trained Text Encoder产生text embeddings(绿色部分)，将region embeddings和text embeddings进行点积然后softmax归一化，监督信号是对应类别位置1，其余位置为0。
+
+2. 推理阶段
+
+将基本类别和新增类别转化成文本送入Pre-trained Text Encoder产生text embeddings(分别为绿色和蓝色部分)，同时通过Mask R-CNN产生类别无关的region embeddings，然后将region embeddings和text embeddings进行点积然后softmax归一化，新增类别(蓝色部分)取最大值的类别为该区域的预测结果。
+
+- Loss
+
+![image](figures/ViLD_model.jpg)
+
+region 分类用CE；image和region的蒸馏用L1 loss
